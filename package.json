@@ -1,0 +1,44 @@
+{
+  "name": "pi-commandcode-usage",
+  "version": "0.1.0",
+  "description": "Command Code usage and quota monitor for Pi coding agent. Displays 5h and weekly rolling quota in the footer, matching Pi's native footer experience.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "commandcode",
+    "usage",
+    "quota"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inouemoby/pi-commandcode-usage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inouemoby/pi-commandcode-usage/issues"
+  },
+  "homepage": "https://github.com/inouemoby/pi-commandcode-usage",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.84.4",
+    "@earendil-works/pi-coding-agent": "^0.84.4",
+    "@earendil-works/pi-tui": "^0.84.4",
+    "@types/node": "^22.15.3",
+    "typebox": "^1.0.86",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,7 +1,6 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import { type ExtensionAPI, readStoredCredential } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { Type } from "typebox";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -558,42 +557,4 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
     },
   });
 
-  // ── Tool ───────────────────────────────────────────────────
-  pi.registerTool({
-    name: "commandcode_usage",
-    label: "Command Code Usage",
-    description: "Get current Command Code monthly credits, quota and rolling limit status.",
-    parameters: Type.Object({}),
-    async execute() {
-      try {
-        const d = await getUsage(true);
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              plan: d.planId,
-              monthly: {
-                creditsRemaining: d.monthlyCredits,
-                percentUsed: d.monthlyPercent >= 0 ? d.monthlyPercent : null,
-                resetsIn: d.periodEndMs > 0 ? humanDuration(d.periodEndMs - Date.now()) : null,
-              },
-              totalRemainingCredits: d.remainingCredits,
-              fiveHour: d.fiveHourPercent >= 0 ? {
-                percentUsed: d.fiveHourPercent,
-                resetsIn: humanDuration(d.fiveHourResetMs - Date.now()),
-              } : null,
-              weekly: d.weeklyPercent >= 0 ? {
-                percentUsed: d.weeklyPercent,
-                resetsIn: humanDuration(d.weeklyResetMs - Date.now()),
-              } : null,
-              periodCost: d.totalCost,
-            }, null, 2),
-          }],
-          details: d,
-        };
-      } catch (err: any) {
-        throw new Error(`Command Code usage check failed: ${err.message}`);
-      }
-    },
-  });
 }

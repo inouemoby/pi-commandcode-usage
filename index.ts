@@ -393,7 +393,6 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
           let usageIdx = -1;
           if (usage) {
             const balance = `B:$${usage.remainingCredits.toFixed(2)}`;
-            const monthly = usage.monthlyPercent >= 0 ? `Mo:${usage.monthlyPercent}%` : "";
             const has5h = usage.fiveHourPercent >= 0;
             const hasWk = usage.weeklyPercent >= 0;
             const rolling: string[] = [];
@@ -410,7 +409,7 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
             const rollingText = rolling.join("");
             usageBalanceOnly = balance;
             usageCompact = [balance, rollingText].filter(Boolean).join(" ");
-            usageFull = [balance, monthly, rollingText].filter(Boolean).join(" ");
+            usageFull = usageCompact;
             usageIdx = parts.length;
             parts.push(usageFull);
           }

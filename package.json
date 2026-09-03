@@ -1,6 +1,6 @@
 {
   "name": "pi-commandcode-usage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Command Code usage and quota monitor for Pi coding agent. Displays 5h and weekly rolling quota in the footer, matching Pi's native footer experience.",
   "type": "module",
   "license": "MIT",

@@ -362,11 +362,13 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
             }
           }
           const parts: string[] = [];
+          const cachePartIndexes: number[] = [];
+          let costPartIndex = -1;
           if (ti) parts.push(`↑${formatTokens(ti)}`);
           if (to) parts.push(`↓${formatTokens(to)}`);
-          if (tr) parts.push(`R${formatTokens(tr)}`);
-          if (tw) parts.push(`W${formatTokens(tw)}`);
-          if (tc) parts.push(`$${tc.toFixed(3)}`);
+          if (tr) { cachePartIndexes.push(parts.length); parts.push(`R${formatTokens(tr)}`); }
+          if (tw) { cachePartIndexes.push(parts.length); parts.push(`W${formatTokens(tw)}`); }
+          if (tc) { costPartIndex = parts.length; parts.push(`$${tc.toFixed(3)}`); }
 
           // Context %
           const cu = ctx.getContextUsage();
@@ -381,38 +383,36 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
           parts.push(cpStr);
 
           // ── Command Code Quota segment ──
-          // Core: Monthly credits remaining (or used %).
-          // Plus rolling windows: 5h and Wk if available.
+          // Keep the balance visible. Rolling windows are deliberately compact:
+          // `5h:X%Wk:Y%` has no separator between the two window meters.
+          // Like Codex, progressively remove less important information when
+          // the footer is narrow instead of truncating the important meters.
           let usageFull = "";
+          let usageCompact = "";
+          let usageBalanceOnly = "";
           let usageIdx = -1;
           if (usage) {
-            const segments: string[] = [];
-
-            // 1. Monthly quota (core metric)
-            if (usage.monthlyPercent >= 0) {
-              segments.push(`Mo:${usage.monthlyPercent}%`);
-            } else if (usage.remainingCredits > 0) {
-              segments.push(`$${usage.remainingCredits.toFixed(0)}`);
-            }
-
-            // 2. Rolling limits (5h & Wk)
+            const balance = `B:$${usage.remainingCredits.toFixed(2)}`;
+            const monthly = usage.monthlyPercent >= 0 ? `Mo:${usage.monthlyPercent}%` : "";
             const has5h = usage.fiveHourPercent >= 0;
             const hasWk = usage.weeklyPercent >= 0;
-            if (has5h || hasWk) {
-              const sSev = has5h ? usageSeverity(usage.fiveHourPercent, FIVE_HOUR_MS, usage.fiveHourResetMs) : 0;
-              const wSev = hasWk ? usageSeverity(usage.weeklyPercent, WEEK_MS, usage.weeklyResetMs) : 0;
-              const sFlag = sSev === 2 ? "!!" : sSev === 1 ? "!" : "";
-              const wFlag = wSev === 2 ? "!!" : wSev === 1 ? "!" : "";
-
-              if (has5h) segments.push(`${sFlag}5h:${usage.fiveHourPercent}%`);
-              if (hasWk) segments.push(`${wFlag}Wk:${usage.weeklyPercent}%`);
+            const rolling: string[] = [];
+            if (has5h) {
+              const severity = usageSeverity(usage.fiveHourPercent, FIVE_HOUR_MS, usage.fiveHourResetMs);
+              const flag = severity === 2 ? "!!" : severity === 1 ? "!" : "";
+              rolling.push(`${flag}5h:${usage.fiveHourPercent}%`);
             }
-
-            if (segments.length > 0) {
-              usageFull = segments.join(" ");
-              usageIdx = parts.length;
-              parts.push(usageFull);
+            if (hasWk) {
+              const severity = usageSeverity(usage.weeklyPercent, WEEK_MS, usage.weeklyResetMs);
+              const flag = severity === 2 ? "!!" : severity === 1 ? "!" : "";
+              rolling.push(`${flag}Wk:${usage.weeklyPercent}%`);
             }
+            const rollingText = rolling.join("");
+            usageBalanceOnly = balance;
+            usageCompact = [balance, rollingText].filter(Boolean).join(" ");
+            usageFull = [balance, monthly, rollingText].filter(Boolean).join(" ");
+            usageIdx = parts.length;
+            parts.push(usageFull);
           }
 
           let left = parts.join(" ");
@@ -427,6 +427,25 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
           const withProv = `(${PROVIDER_ID}) ${right}`;
           if (visibleWidth(left) + 2 + visibleWidth(withProv) <= width) {
             right = withProv;
+          }
+
+          // Match Codex's compacting order: omit provider, cache counters,
+          // cost, then less important Command Code quota details.
+          if (visibleWidth(left) + 2 + visibleWidth(right) > width) {
+            for (const index of cachePartIndexes) parts[index] = "";
+            left = parts.filter(Boolean).join(" ");
+          }
+          if (visibleWidth(left) + 2 + visibleWidth(right) > width && costPartIndex >= 0) {
+            parts[costPartIndex] = "";
+            left = parts.filter(Boolean).join(" ");
+          }
+          if (visibleWidth(left) + 2 + visibleWidth(right) > width && usageIdx >= 0) {
+            parts[usageIdx] = usageCompact;
+            left = parts.filter(Boolean).join(" ");
+          }
+          if (visibleWidth(left) + 2 + visibleWidth(right) > width && usageIdx >= 0) {
+            parts[usageIdx] = usageBalanceOnly;
+            left = parts.filter(Boolean).join(" ");
           }
 
           const lw = visibleWidth(left);

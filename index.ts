@@ -498,6 +498,12 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
   pi.on("agent_start", async (_e, ctx) => {
     latestCtx = ctx;
     agentBusy = true;
+    // Re-read thinking level in case it was set after session_start.
+    const tl = pi.getThinkingLevel?.() || "off";
+    if (tl !== thinkingLevel) {
+      thinkingLevel = tl;
+      trigger();
+    }
   });
 
   pi.on("agent_end", async (_e, ctx) => {

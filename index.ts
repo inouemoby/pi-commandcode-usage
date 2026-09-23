@@ -255,6 +255,7 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
   let usage: CommandCodeUsageData | null = null;
   let usagePromise: Promise<CommandCodeUsageData> | null = null;
   let footerOn = false;
+  let footerGeneration = 0;
   let _tui: any = null;
   let latestCtx: any = null;
   let agentBusy = false;
@@ -284,14 +285,12 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
     return usagePromise;
   }
 
+  function requestRenderSafe(tui: any): void {
+    try { tui?.requestRender?.(); } catch { /* footer may already be disposed */ }
+  }
+
   function trigger() {
-    setTimeout(() => {
-      try {
-        _tui?.requestRender?.();
-      } catch {
-        /* footer unmounted */
-      }
-    }, 0);
+    setTimeout(() => requestRenderSafe(_tui), 0);
   }
 
   async function refresh(ctx: any, force = false): Promise<void> {
@@ -310,9 +309,9 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
     }
   }
 
-  function toggleFooter(ctx: any): void {
+  function toggleFooter(ctx: any, force = false): void {
     if (isCommandCode(ctx) && readApiKey()) {
-      if (!footerOn) {
+      if (!footerOn || force) {
         ctx.ui.setFooter(buildFooter(ctx));
         footerOn = true;
       }
@@ -326,15 +325,20 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
   }
 
   function buildFooter(ctx: any) {
+    const generation = ++footerGeneration;
     return (tui: any, theme: any, fd: any) => {
       _tui = tui;
-      const unsub = fd.onBranchChange(() => tui.requestRender());
+      const unsub = fd.onBranchChange(() => {
+        if (generation === footerGeneration) requestRenderSafe(tui);
+      });
 
       return {
         dispose: () => {
-          unsub();
-          _tui = null;
-          footerOn = false;
+          try { unsub(); } catch { /* already disposed */ }
+          if (generation === footerGeneration) {
+            _tui = null;
+            footerOn = false;
+          }
         },
         invalidate() {},
         render(width: number): string[] {
@@ -486,13 +490,14 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
     latestCtx = ctx;
     thinkingLevel = pi.getThinkingLevel?.() || "off";
     footerOn = false;
-    toggleFooter(ctx);
+    toggleFooter(ctx, true);
     if (readApiKey()) refresh(ctx);
     startIdleTimer();
   });
 
   pi.on("session_shutdown", async () => {
     stopIdleTimer();
+    latestCtx = null;
   });
 
   pi.on("agent_start", async (_e, ctx) => {
@@ -516,8 +521,12 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
     latestCtx = ctx;
     if (isCommandCode(ctx)) {
       setTimeout(() => {
-        toggleFooter(ctx);
-        if (readApiKey()) refresh(ctx);
+        const currentCtx = latestCtx;
+        if (!currentCtx || !isCommandCode(currentCtx)) return;
+        try {
+          toggleFooter(currentCtx, true);
+          if (readApiKey()) refresh(currentCtx);
+        } catch { /* session or footer was disposed */ }
       }, 0);
     } else {
       toggleFooter(ctx);

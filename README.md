@@ -8,7 +8,6 @@ Displays 5-hour and weekly rolling limits, remaining credits, and reset times in
 
 - Footer display for 5-hour and weekly usage
 - `/commandcode` command to view quota details
-- `commandcode_usage` tool for the agent
 - Automatic idle refresh
 
 ## Authentication

@@ -366,9 +366,10 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
           }
           const parts: string[] = [];
           const cachePartIndexes: number[] = [];
+          const tokenPartIndexes: number[] = [];
           let costPartIndex = -1;
-          if (ti) parts.push(`↑${formatTokens(ti)}`);
-          if (to) parts.push(`↓${formatTokens(to)}`);
+          if (ti) { tokenPartIndexes.push(parts.length); parts.push(`↑${formatTokens(ti)}`); }
+          if (to) { tokenPartIndexes.push(parts.length); parts.push(`↓${formatTokens(to)}`); }
           if (tr) { cachePartIndexes.push(parts.length); parts.push(`R${formatTokens(tr)}`); }
           if (tw) { cachePartIndexes.push(parts.length); parts.push(`W${formatTokens(tw)}`); }
           if (tc) { costPartIndex = parts.length; parts.push(`$${tc.toFixed(3)}`); }
@@ -432,7 +433,7 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
           }
 
           // Match Codex's compacting order: omit provider, cache counters,
-          // cost, then less important Command Code quota details.
+          // cost, cumulative tokens, then collapse the quota to the balance only.
           if (visibleWidth(left) + 2 + visibleWidth(right) > width) {
             for (const index of cachePartIndexes) parts[index] = "";
             left = parts.filter(Boolean).join(" ");
@@ -441,8 +442,8 @@ export default function piCommandCodeUsage(pi: ExtensionAPI): void {
             parts[costPartIndex] = "";
             left = parts.filter(Boolean).join(" ");
           }
-          if (visibleWidth(left) + 2 + visibleWidth(right) > width && usageIdx >= 0) {
-            parts[usageIdx] = usageCompact;
+          if (visibleWidth(left) + 2 + visibleWidth(right) > width && tokenPartIndexes.length > 0) {
+            for (const index of tokenPartIndexes) parts[index] = "";
             left = parts.filter(Boolean).join(" ");
           }
           if (visibleWidth(left) + 2 + visibleWidth(right) > width && usageIdx >= 0) {
